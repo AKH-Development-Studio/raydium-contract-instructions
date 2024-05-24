@@ -550,6 +550,7 @@ pub fn swap_base_in(
     amm_pool: &Pubkey,
     amm_authority: &Pubkey,
     amm_open_orders: &Pubkey,
+    amm_target_orders: &Pubkey,
     amm_coin_vault: &Pubkey,
     amm_pc_vault: &Pubkey,
     market_program: &Pubkey,
@@ -563,7 +564,7 @@ pub fn swap_base_in(
     user_token_source: &Pubkey,
     user_token_destination: &Pubkey,
     user_source_owner: &Pubkey,
-
+    version: u64,
     amount_in: u64,
     minimum_amount_out: u64,
 ) -> Result<Instruction, ProgramError> {
@@ -572,15 +573,19 @@ pub fn swap_base_in(
         minimum_amount_out,
     })
     .pack()?;
-
-    let accounts = vec![
+    let mut accounts = vec![
         // spl token
         AccountMeta::new_readonly(spl_token::id(), false),
         // amm
         AccountMeta::new(*amm_pool, false),
         AccountMeta::new_readonly(*amm_authority, false),
         AccountMeta::new(*amm_open_orders, false),
-        // AccountMeta::new(*amm_target_orders, false),
+    ];
+    if version == 4 {
+         accounts.push(AccountMeta::new(*amm_target_orders, false));
+    }
+
+    let mut accounts_sfx = vec![
         AccountMeta::new(*amm_coin_vault, false),
         AccountMeta::new(*amm_pc_vault, false),
         // market
@@ -597,6 +602,8 @@ pub fn swap_base_in(
         AccountMeta::new(*user_token_destination, false),
         AccountMeta::new_readonly(*user_source_owner, true),
     ];
+
+    accounts.append(&mut accounts_sfx);
 
     Ok(Instruction {
         program_id: *amm_program,
